@@ -17,7 +17,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "SSEEvent",
-    "sse_schema_for", 
+    "sse_schema_for",
     "generate_sse_response_schema",
     "create_sse_event_examples",
     "create_example_factory",

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 @dataclass
 class SSEEvent:
     """Represents an SSE event with all possible fields."""
+
     data: str
     event: Optional[str] = None
     id: Optional[str] = None
@@ -35,10 +36,10 @@ class SSEEvent:
 def sse_schema_for(event_models: List[Type[BaseModel]]) -> Dict[str, Any]:
     """
     Generate an OpenAPI schema for an SSE endpoint with typed events.
-    
+
     Args:
         event_models: List of Pydantic model classes that can be sent as SSE events
-        
+
     Returns:
         OpenAPI schema dictionary for SSE content
     """
@@ -67,7 +68,7 @@ def generate_sse_response_schema(
 ) -> Dict[str, Any]:
     """
     Generate a complete OpenAPI response schema for SSE endpoints.
-    
+
     Args:
         event_models: List of Pydantic model classes that can be sent as SSE events
         description: Description of the SSE endpoint
@@ -75,24 +76,24 @@ def generate_sse_response_schema(
         example_factories: Optional mapping of model classes to factory functions that create examples
         event_names: Optional mapping of model classes to custom event names
         sse_config: Optional SSE configuration (retry intervals, etc.)
-        
+
     Returns:
         Complete OpenAPI response schema dictionary
     """
     if event_descriptions is None:
         event_descriptions = {}
-    
+
     if event_names is None:
         event_names = {model: model.__name__.lower() for model in event_models}
-    
+
     if sse_config is None:
         sse_config = {}
-    
+
     # Create examples using factories or defaults
     examples = {}
     for model in event_models:
         event_name = event_names[model]
-        
+
         if example_factories and model in example_factories:
             # Use custom factory
             try:
@@ -133,7 +134,7 @@ def generate_sse_response_schema(
     # Build example SSE stream with full SSE features
     example_lines = []
     event_id = 1
-    
+
     for model in event_models:
         event_name = event_names[model]
         if event_name in examples:
@@ -141,31 +142,31 @@ def generate_sse_response_schema(
                 data=examples[event_name].model_dump_json(),
                 event=event_name,
                 id=str(event_id) if sse_config.get("include_ids", False) else None,
-                retry=sse_config.get("retry_interval") if event_id == 1 else None,  # Only on first event
+                retry=(
+                    sse_config.get("retry_interval") if event_id == 1 else None
+                ),  # Only on first event
                 comment=sse_config.get("comment") if event_id == 1 else None,
             )
-            example_lines.extend(sse_event.format().split('\n'))
+            example_lines.extend(sse_event.format().split("\n"))
             event_id += 1
 
     full_description = (
         f"{description}\n\n"
-        "Event Types:\n"
-        + "\n".join(event_type_descriptions) + "\n\n"
+        "Event Types:\n" + "\n".join(event_type_descriptions) + "\n\n"
         "Each event data field contains JSON matching one of the response schemas.\n\n"
     )
-    
+
     if sse_config.get("include_ids"):
-        full_description += "Events include sequential IDs for client-side tracking.\n\n"
-    
+        full_description += (
+            "Events include sequential IDs for client-side tracking.\n\n"
+        )
+
     if sse_config.get("retry_interval"):
-        full_description += f"Client retry interval: {sse_config['retry_interval']}ms\n\n"
-    
-    full_description += (
-        "Example:\n\n"
-        "```\n"
-        + "\n".join(example_lines) +
-        "```"
-    )
+        full_description += (
+            f"Client retry interval: {sse_config['retry_interval']}ms\n\n"
+        )
+
+    full_description += "Example:\n\n" "```\n" + "\n".join(example_lines) + "```"
 
     return {
         200: {
@@ -178,7 +179,7 @@ def generate_sse_response_schema(
 def _get_default_value_for_field(field_info) -> Any:
     """Get a reasonable default value for a Pydantic field."""
     annotation = field_info.annotation
-    
+
     # Handle common types
     if annotation == str:
         return "example"
@@ -188,9 +189,13 @@ def _get_default_value_for_field(field_info) -> Any:
         return 0.0
     elif annotation == bool:
         return False
-    elif annotation == list or (hasattr(annotation, '__origin__') and annotation.__origin__ == list):
+    elif annotation == list or (
+        hasattr(annotation, "__origin__") and annotation.__origin__ == list
+    ):
         return []
-    elif annotation == dict or (hasattr(annotation, '__origin__') and annotation.__origin__ == dict):
+    elif annotation == dict or (
+        hasattr(annotation, "__origin__") and annotation.__origin__ == dict
+    ):
         return {}
     else:
         # For complex types, return a placeholder string
@@ -203,20 +208,20 @@ def create_sse_event_examples(
 ) -> Dict[str, Dict[str, Any]]:
     """
     Create OpenAPI examples for SSE events with full SSE field support.
-    
+
     Args:
         models_with_data: Dictionary mapping event names to example model instances
         sse_config: Optional SSE configuration for additional fields
-        
+
     Returns:
         OpenAPI examples dictionary
     """
     if sse_config is None:
         sse_config = {}
-        
+
     examples = {}
     event_id = 1
-    
+
     for event_name, model_instance in models_with_data.items():
         sse_event = SSEEvent(
             data=model_instance.model_dump_json(),
@@ -225,28 +230,30 @@ def create_sse_event_examples(
             retry=sse_config.get("retry_interval") if event_id == 1 else None,
             comment=sse_config.get("comment") if event_id == 1 else None,
         )
-        
+
         examples[f"{event_name}_event"] = {
             "summary": f"{event_name.title()} Event",
             "description": f"Server-Sent Event with {event_name} data",
             "value": sse_event.format(),
         }
         event_id += 1
-    
+
     return examples
 
 
-def create_example_factory(model_class: Type[BaseModel], **field_values) -> Callable[[], BaseModel]:
+def create_example_factory(
+    model_class: Type[BaseModel], **field_values
+) -> Callable[[], BaseModel]:
     """
     Create a factory function for generating model examples with specific field values.
-    
+
     Args:
         model_class: The Pydantic model class
         **field_values: Field values to use in the example
-        
+
     Returns:
         Factory function that creates model instances
-        
+
     Example:
         progress_factory = create_example_factory(
             ProgressUpdate,
@@ -255,7 +262,8 @@ def create_example_factory(model_class: Type[BaseModel], **field_values) -> Call
             message="Processing in progress..."
         )
     """
+
     def factory() -> BaseModel:
         return model_class(**field_values)
-    
+
     return factory
