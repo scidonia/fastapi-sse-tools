@@ -1,14 +1,28 @@
 [project]
-name = "openapi_sse"
+name = "fastapi-sse-tools"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI Server-Sent Events utilities for OpenAPI schema generation"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi",
+    "pydantic>=2.0.0",
+]
 
 [build-system]
 requires = ["hatchling", "editables"]
 build-backend = "hatchling.build"
 
-[project.scripts]
-hello = "openapi_sse.main:main"
+[tool.hatch.build.targets.wheel]
+packages = ["src/fastapi-sse-tools"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio",
+    "httpx",
+    "black",
+    "isort",
+    "mypy",
+    "ruff",
+]
